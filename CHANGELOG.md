@@ -17,7 +17,8 @@ output and work notes, so dates and early versions are approximate.
 - Projector no longer rebuilds its screen on every save, which dropped the
   background and made it reload and lag.
 - Changing backgrounds now crossfades: the new video fades in only once it is
-  playing, then the old one is removed. No black flash or stutter.
+  playing, then the old one is removed. No black flash or stutter. Quick
+  back-to-back changes keep the newest background.
 
 ### Changed
 - `npm run sync` falls back to the committed `app/index.html` when
