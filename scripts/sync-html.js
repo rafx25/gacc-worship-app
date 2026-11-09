@@ -8,6 +8,11 @@ const targetDir = path.resolve(__dirname, '..', 'app');
 const target = path.join(targetDir, 'index.html');
 
 if (!fs.existsSync(source)) {
+  // CI / fresh clone: the source lives outside the repo, so use the committed copy.
+  if (fs.existsSync(target)) {
+    console.log(`"${path.basename(source)}" not found, using committed app/index.html`);
+    process.exit(0);
+  }
   console.error(`Could not find ${source}`);
   process.exit(1);
 }
