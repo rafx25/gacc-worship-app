@@ -3,6 +3,58 @@
 Electron wrapper that turns `../GACC Worship.html` into an installable desktop app.
 The HTML file is the only copy of the app: edit it, then rebuild. `npm run sync` copies it into `app/index.html`, and every start and build runs that step first.
 
+## Tech stack
+
+The app itself is one HTML file with plain HTML, CSS and JavaScript: no framework, no bundler, no CDN. It runs fully offline.
+
+| Part | What it uses | Version |
+|------|--------------|---------|
+| App UI | Vanilla HTML / CSS / JavaScript (single file `GACC Worship.html`) | n/a |
+| Desktop shell | [Electron](https://www.electronjs.org/) (`main.js`) | 44.7.2 |
+| Browser engine inside the app | Chromium (bundled with Electron) | 152.0.7977.149 |
+| JavaScript runtime inside the app | Node.js (bundled with Electron) | 24.21.0 |
+| Installer / portable builder | [electron-builder](https://www.electron.build/) (NSIS + portable) | 26.15.3 |
+| Build machine | Node.js / npm | 20+ required (built with 26.13.0 / 11.20.0) |
+
+Browser features the app relies on (all built into Chromium, nothing to install):
+
+- **IndexedDB**: the song library, uploaded backgrounds, videos, sound and logo, stored on the device.
+- **localStorage**: settings and the playlist.
+- **BroadcastChannel**: keeps the operator window and the projector window in sync.
+- **DecompressionStream**: reads pictures out of `.pptx` files when you upload a PowerPoint background.
+- **HTML5 video / canvas**: live backgrounds, seamless crossfade loops, and the background thumbnails.
+
+### Live background generator (`../live-bg-studio`, optional)
+
+Only used to make the looping MP4s in `../live-bg`. Not needed to run the app.
+
+| Tool | Version |
+|------|---------|
+| [three.js](https://threejs.org/) (3D scenes) | 0.170.0 |
+| [mp4-muxer](https://github.com/Vanilagy/mp4-muxer) (MP4 export) | 5.1.3 |
+| ffmpeg-static (checking the exported files) | 5.2.0 |
+
+The bundled backgrounds are H.264 (High), 1920×1080, 30 fps, about 6.8 Mbps, about 21 s per loop.
+
+## Minimum device requirements
+
+These are estimates from the Electron/Chromium requirements and the 1080p video backgrounds. They were not measured on low-end hardware, so test a new PC once before using it in a service.
+
+| | Minimum | Recommended (smooth 1080p video backgrounds) |
+|---|---|---|
+| OS | Windows 10 64-bit (Windows 7/8 not supported) | Windows 10/11 64-bit |
+| CPU | Dual-core 64-bit, 2015 or newer (e.g. Intel Core i3 6th gen / AMD Ryzen 3) | Quad-core (Intel Core i5 8th gen / Ryzen 5 or better) |
+| RAM | 4 GB | 8 GB |
+| Graphics | Any GPU with hardware H.264 decoding (Intel HD 520 or newer) | Intel UHD 620 / Iris Xe, or any dedicated GPU |
+| Storage | ~400 MB for the app + room for your media (each bundled background is ~18 MB) | SSD, 2 GB+ free |
+| Display | 1280×720 operator screen | Second display / projector over HDMI for Present mode |
+
+Notes:
+
+- The portable `.exe` unpacks itself (~370 MB) to a temp folder on every launch, so it opens slower on an HDD or a slow USB drive.
+- Without hardware video decoding, 1080p backgrounds may stutter. Use a picture background on those PCs, or a lower-resolution video.
+- macOS builds need macOS 12 Monterey or newer (Chromium 152 requirement).
+
 ## Build the Windows installer
 
 Requires Node.js 20+.
