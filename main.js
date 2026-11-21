@@ -118,6 +118,18 @@ function setupProjector(win) {
   win.on('closed', () => {
     if (projectorWindow === win) projectorWindow = null;
   });
+  // Safety net for a live service: a projector that crashes, or stays frozen for 4 s, reloads itself
+  // and comes back on the current slide (it reads the live state on load).
+  let stuck = null;
+  win.on('unresponsive', () => {
+    clearTimeout(stuck);
+    stuck = setTimeout(() => alive(win) && win.webContents.forcefullyCrashRenderer(), 4000);
+  });
+  win.on('responsive', () => clearTimeout(stuck));
+  win.webContents.on('render-process-gone', (_e, details) => {
+    clearTimeout(stuck);
+    if (alive(win) && details.reason !== 'clean-exit') win.webContents.reload();
+  });
   const audience = audienceDisplay();
   if (audience) placeOnDisplay(win, audience, true);
 }
@@ -138,18 +150,28 @@ function createMainWindow() {
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (isProjectorUrl(url)) {
+      // The projector is its own window with its own renderer process, not a window.open popup:
+      // a popup shares the operator's thread, so heavy work there (imports, thumbnails) froze the live screen.
+      // It still gets every update through BroadcastChannel / localStorage.
+      if (alive(projectorWindow)) {
+        projectorWindow.show();
+        projectorWindow.focus();
+        return { action: 'deny' };
+      }
       const audience = audienceDisplay();
-      return {
-        action: 'allow',
-        overrideBrowserWindowOptions: {
-          ...windowedBounds(audience || operatorDisplay()),
-          title: 'GACC Worship — Projector',
-          backgroundColor: '#000000',
-          icon: ICON,
-          autoHideMenuBar: true,
-          webPreferences,
-        },
-      };
+      const win = new BrowserWindow({
+        ...windowedBounds(audience || operatorDisplay()),
+        show: false,
+        title: 'GACC Worship — Projector',
+        backgroundColor: '#000000',
+        icon: ICON,
+        autoHideMenuBar: true,
+        webPreferences,
+      });
+      setupProjector(win);
+      win.loadURL(url);
+      if (!audience) win.once('ready-to-show', () => alive(win) && win.show());
+      return { action: 'deny' };
     }
     if (/^https?:\/\//i.test(url)) shell.openExternal(url);
     return { action: 'deny' };
